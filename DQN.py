@@ -1,14 +1,15 @@
+import collections
 import random
+from operator import add
+
 import numpy as np
 import pandas as pd
-from operator import add
-import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import copy
-DEVICE = 'cpu' # 'cuda' if torch.cuda.is_available() else 'cpu'
+
+DEVICE = "cpu"  # 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 class DQNAgent(torch.nn.Module):
     def __init__(self, params):
@@ -19,18 +20,18 @@ class DQNAgent(torch.nn.Module):
         self.short_memory = np.array([])
         self.agent_target = 1
         self.agent_predict = 0
-        self.learning_rate = params['learning_rate']        
+        self.learning_rate = params["learning_rate"]
         self.epsilon = 1
         self.actual = []
-        self.first_layer = params['first_layer_size']
-        self.second_layer = params['second_layer_size']
-        self.third_layer = params['third_layer_size']
-        self.memory = collections.deque(maxlen=params['memory_size'])
-        self.weights = params['weights_path']
-        self.load_weights = params['load_weights']
+        self.first_layer = params["first_layer_size"]
+        self.second_layer = params["second_layer_size"]
+        self.third_layer = params["third_layer_size"]
+        self.memory = collections.deque(maxlen=params["memory_size"])
+        self.weights = params["weights_path"]
+        self.load_weights = params["load_weights"]
         self.optimizer = None
         self.network()
-          
+
     def network(self):
         # Layers
         self.f1 = nn.Linear(11, self.first_layer)
@@ -48,7 +49,7 @@ class DQNAgent(torch.nn.Module):
         x = F.relu(self.f3(x))
         x = F.softmax(self.f4(x), dim=-1)
         return x
-    
+
     def get_state(self, game, player, food):
         """
         Return the state.
@@ -63,30 +64,105 @@ class DQNAgent(torch.nn.Module):
             - The food is on the left
             - The food is on the right
             - The food is on the upper side
-            - The food is on the lower side      
+            - The food is on the lower side
         """
         state = [
-            (player.x_change == 20 and player.y_change == 0 and ((list(map(add, player.position[-1], [20, 0])) in player.position) or
-            player.position[-1][0] + 20 >= (game.game_width - 20))) or (player.x_change == -20 and player.y_change == 0 and ((list(map(add, player.position[-1], [-20, 0])) in player.position) or
-            player.position[-1][0] - 20 < 20)) or (player.x_change == 0 and player.y_change == -20 and ((list(map(add, player.position[-1], [0, -20])) in player.position) or
-            player.position[-1][-1] - 20 < 20)) or (player.x_change == 0 and player.y_change == 20 and ((list(map(add, player.position[-1], [0, 20])) in player.position) or
-            player.position[-1][-1] + 20 >= (game.game_height-20))),  # danger straight
-
-            (player.x_change == 0 and player.y_change == -20 and ((list(map(add,player.position[-1],[20, 0])) in player.position) or
-            player.position[ -1][0] + 20 > (game.game_width-20))) or (player.x_change == 0 and player.y_change == 20 and ((list(map(add,player.position[-1],
-            [-20,0])) in player.position) or player.position[-1][0] - 20 < 20)) or (player.x_change == -20 and player.y_change == 0 and ((list(map(
-            add,player.position[-1],[0,-20])) in player.position) or player.position[-1][-1] - 20 < 20)) or (player.x_change == 20 and player.y_change == 0 and (
-            (list(map(add,player.position[-1],[0,20])) in player.position) or player.position[-1][
-             -1] + 20 >= (game.game_height-20))),  # danger right
-
-             (player.x_change == 0 and player.y_change == 20 and ((list(map(add,player.position[-1],[20,0])) in player.position) or
-             player.position[-1][0] + 20 > (game.game_width-20))) or (player.x_change == 0 and player.y_change == -20 and ((list(map(
-             add, player.position[-1],[-20,0])) in player.position) or player.position[-1][0] - 20 < 20)) or (player.x_change == 20 and player.y_change == 0 and (
-            (list(map(add,player.position[-1],[0,-20])) in player.position) or player.position[-1][-1] - 20 < 20)) or (
-            player.x_change == -20 and player.y_change == 0 and ((list(map(add,player.position[-1],[0,20])) in player.position) or
-            player.position[-1][-1] + 20 >= (game.game_height-20))), #danger left
-
-
+            (
+                player.x_change == 20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [20, 0])) in player.position)
+                    or player.position[-1][0] + 20 >= (game.game_width - 20)
+                )
+            )
+            or (
+                player.x_change == -20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                    or player.position[-1][0] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == 0
+                and player.y_change == -20
+                and (
+                    (list(map(add, player.position[-1], [0, -20])) in player.position)
+                    or player.position[-1][-1] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == 0
+                and player.y_change == 20
+                and (
+                    (list(map(add, player.position[-1], [0, 20])) in player.position)
+                    or player.position[-1][-1] + 20 >= (game.game_height - 20)
+                )
+            ),  # danger straight
+            (
+                player.x_change == 0
+                and player.y_change == -20
+                and (
+                    (list(map(add, player.position[-1], [20, 0])) in player.position)
+                    or player.position[-1][0] + 20 > (game.game_width - 20)
+                )
+            )
+            or (
+                player.x_change == 0
+                and player.y_change == 20
+                and (
+                    (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                    or player.position[-1][0] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == -20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [0, -20])) in player.position)
+                    or player.position[-1][-1] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == 20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [0, 20])) in player.position)
+                    or player.position[-1][-1] + 20 >= (game.game_height - 20)
+                )
+            ),  # danger right
+            (
+                player.x_change == 0
+                and player.y_change == 20
+                and (
+                    (list(map(add, player.position[-1], [20, 0])) in player.position)
+                    or player.position[-1][0] + 20 > (game.game_width - 20)
+                )
+            )
+            or (
+                player.x_change == 0
+                and player.y_change == -20
+                and (
+                    (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                    or player.position[-1][0] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == 20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [0, -20])) in player.position)
+                    or player.position[-1][-1] - 20 < 20
+                )
+            )
+            or (
+                player.x_change == -20
+                and player.y_change == 0
+                and (
+                    (list(map(add, player.position[-1], [0, 20])) in player.position)
+                    or player.position[-1][-1] + 20 >= (game.game_height - 20)
+                )
+            ),  # danger left
             player.x_change == -20,  # move left
             player.x_change == 20,  # move right
             player.y_change == -20,  # move up
@@ -94,14 +170,14 @@ class DQNAgent(torch.nn.Module):
             food.x_food < player.x,  # food left
             food.x_food > player.x,  # food right
             food.y_food < player.y,  # food up
-            food.y_food > player.y  # food down
+            food.y_food > player.y,  # food down
         ]
 
         for i in range(len(state)):
             if state[i]:
-                state[i]=1
+                state[i] = 1
             else:
-                state[i]=0
+                state[i] = 0
 
         return np.asarray(state)
 
@@ -109,7 +185,7 @@ class DQNAgent(torch.nn.Module):
         """
         Return the reward.
         The reward is:
-            -10 when Snake crashes. 
+            -10 when Snake crashes.
             +10 when Snake eats food
             0 otherwise
         """
@@ -123,7 +199,7 @@ class DQNAgent(torch.nn.Module):
 
     def remember(self, state, action, reward, next_state, done):
         """
-        Store the <state, action, reward, next_state, is_done> tuple in a 
+        Store the <state, action, reward, next_state, is_done> tuple in a
         memory buffer for replay memory.
         """
         self.memory.append((state, action, reward, next_state, done))
@@ -140,10 +216,16 @@ class DQNAgent(torch.nn.Module):
             self.train()
             torch.set_grad_enabled(True)
             target = reward
-            next_state_tensor = torch.tensor(np.expand_dims(next_state, 0), dtype=torch.float32).to(DEVICE)
-            state_tensor = torch.tensor(np.expand_dims(state, 0), dtype=torch.float32, requires_grad=True).to(DEVICE)
+            next_state_tensor = torch.tensor(
+                np.expand_dims(next_state, 0), dtype=torch.float32
+            ).to(DEVICE)
+            state_tensor = torch.tensor(
+                np.expand_dims(state, 0), dtype=torch.float32, requires_grad=True
+            ).to(DEVICE)
             if not done:
-                target = reward + self.gamma * torch.max(self.forward(next_state_tensor)[0])
+                target = reward + self.gamma * torch.max(
+                    self.forward(next_state_tensor)[0]
+                )
             output = self.forward(state_tensor)
             target_f = output.clone()
             target_f[0][np.argmax(action)] = target
@@ -151,7 +233,7 @@ class DQNAgent(torch.nn.Module):
             self.optimizer.zero_grad()
             loss = F.mse_loss(output, target_f)
             loss.backward()
-            self.optimizer.step()            
+            self.optimizer.step()
 
     def train_short_memory(self, state, action, reward, next_state, done):
         """
@@ -161,8 +243,12 @@ class DQNAgent(torch.nn.Module):
         self.train()
         torch.set_grad_enabled(True)
         target = reward
-        next_state_tensor = torch.tensor(next_state.reshape((1, 11)), dtype=torch.float32).to(DEVICE)
-        state_tensor = torch.tensor(state.reshape((1, 11)), dtype=torch.float32, requires_grad=True).to(DEVICE)
+        next_state_tensor = torch.tensor(
+            next_state.reshape((1, 11)), dtype=torch.float32
+        ).to(DEVICE)
+        state_tensor = torch.tensor(
+            state.reshape((1, 11)), dtype=torch.float32, requires_grad=True
+        ).to(DEVICE)
         if not done:
             target = reward + self.gamma * torch.max(self.forward(next_state_tensor[0]))
         output = self.forward(state_tensor)
