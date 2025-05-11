@@ -1,19 +1,19 @@
-import os
-import pygame
 import argparse
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from DQN import DQNAgent
-from random import randint
-import random
-import statistics
-import torch.optim as optim
-import torch
-from GPyOpt.methods import BayesianOptimization
-from bayesOpt import *
 import datetime
 import distutils.util
+import random
+import statistics
+from random import randint
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pygame
+import seaborn as sns
+import torch
+import torch.optim as optim
+
+from bayesOpt import BayesianOptimizer
+from DQN import DQNAgent
 
 DEVICE = "cpu"  # 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -125,7 +125,7 @@ class Player(object):
         self.position[-1][0] = x
         self.position[-1][1] = y
 
-        if game.crash == False:
+        if not game.crash:
             for i in range(food):
                 x_temp, y_temp = self.position[len(self.position) - 1 - i]
                 game.gameDisplay.blit(self.image, (x_temp, y_temp))
@@ -213,7 +213,7 @@ def plot_seaborn(array_counter, array_score, train):
     sns.set(color_codes=True, font_scale=1.5)
     sns.set_style("white")
     plt.figure(figsize=(13, 8))
-    fit_reg = False if train == False else True
+    fit_reg = not train
     ax = sns.regplot(
         np.array([array_counter])[0],
         np.array([array_score])[0],
@@ -352,18 +352,31 @@ if __name__ == "__main__":
         "--bayesianopt", nargs="?", type=distutils.util.strtobool, default=False
     )
     args = parser.parse_args()
-    print("Args", args)
+
+    # Update parameters based on command line arguments
     params["display"] = args.display
     params["speed"] = args.speed
+
+    # Initialize Bayesian optimization if requested
     if args.bayesianopt:
+        print("Starting Bayesian optimization...")
         bayesOpt = BayesianOptimizer(params)
-        bayesOpt.optimize_RL()
+        optimized_params = bayesOpt.optimize_RL()
+        # Update parameters with optimized values
+        params.update(optimized_params)
+        print("Optimization complete. Using optimized parameters:", params)
+
+    # Run training or testing based on parameters
     if params["train"]:
-        print("Training...")
+        print("Training with parameters:", params)
         params["load_weights"] = False  # when training, the network is not pre-trained
         run(params)
-    if params["test"]:
-        print("Testing...")
+    elif params["test"]:
+        print("Testing with parameters:", params)
         params["train"] = False
         params["load_weights"] = True
         run(params)
+    else:
+        print(
+            "No training or testing mode specified. Please set train=True or test=True in parameters."
+        )

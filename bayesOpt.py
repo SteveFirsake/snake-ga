@@ -15,42 +15,56 @@ from snakeClass import run
 
 class BayesianOptimizer:
     def __init__(self, params):
-        self.params = params
+        self.params = params.copy()  # Create a copy to avoid modifying original
+        self.best_score = float("-inf")
+        self.best_params = None
 
     def optimize_RL(self):
         def optimize(inputs):
-            print("INPUT", inputs)
+            print("Optimizing with inputs:", inputs)
             inputs = inputs[0]
 
             # Variables to optimize
-            self.params["learning_rate"] = inputs[0]
-            lr_string = "{:.8f}".format(self.params["learning_rate"])[2:]
-            self.params["first_layer_size"] = int(inputs[1])
-            self.params["second_layer_size"] = int(inputs[2])
-            self.params["third_layer_size"] = int(inputs[3])
-            self.params["epsilon_decay_linear"] = int(inputs[4])
+            current_params = self.params.copy()
+            current_params["learning_rate"] = inputs[0]
+            lr_string = "{:.8f}".format(current_params["learning_rate"])[2:]
+            current_params["first_layer_size"] = int(inputs[1])
+            current_params["second_layer_size"] = int(inputs[2])
+            current_params["third_layer_size"] = int(inputs[3])
+            current_params["epsilon_decay_linear"] = int(inputs[4])
 
-            self.params["name_scenario"] = "snake_lr{}_struct{}_{}_{}_eps{}".format(
+            current_params["name_scenario"] = "snake_lr{}_struct{}_{}_{}_eps{}".format(
                 lr_string,
-                self.params["first_layer_size"],
-                self.params["second_layer_size"],
-                self.params["third_layer_size"],
-                self.params["epsilon_decay_linear"],
+                current_params["first_layer_size"],
+                current_params["second_layer_size"],
+                current_params["third_layer_size"],
+                current_params["epsilon_decay_linear"],
             )
 
-            self.params["weights_path"] = (
-                "weights/weights_" + self.params["name_scenario"] + ".h5"
+            current_params["weights_path"] = (
+                "weights/weights_" + current_params["name_scenario"] + ".h5"
             )
-            self.params["load_weights"] = False
-            self.params["train"] = True
-            print(self.params)
-            score, mean, stdev = run(self.params)
+            current_params["load_weights"] = False
+            current_params["train"] = True
+
+            print("Testing parameters:", current_params)
+            score, mean, stdev = run(current_params)
             print(
-                "Total score: {}   Mean: {}   Std dev:   {}".format(score, mean, stdev)
+                f"Results - Score: {score:.2f}, Mean: {mean:.2f}, Std dev: {stdev:.2f}"
             )
-            with open(self.params["log_path"], "a") as f:
-                f.write(str(self.params["name_scenario"]) + "\n")
-                f.write("Params: " + str(self.params) + "\n")
+
+            # Update best parameters if we found a better solution
+            if score > self.best_score:
+                self.best_score = score
+                self.best_params = current_params.copy()
+                print("New best parameters found!")
+
+            # Log results
+            with open(current_params["log_path"], "a") as f:
+                f.write(f"\nScenario: {current_params['name_scenario']}\n")
+                f.write(f"Parameters: {current_params}\n")
+                f.write(f"Score: {score}, Mean: {mean}, Std dev: {stdev}\n")
+
             return score
 
         optim_params = [
@@ -92,13 +106,18 @@ class BayesianOptimizer:
             maximize=True,
         )
 
+        print("Starting Bayesian optimization...")
         bayes_optimizer.run_optimization(max_iter=20)
-        print("Optimized learning rate: ", bayes_optimizer.x_opt[0])
-        print("Optimized first layer: ", bayes_optimizer.x_opt[1])
-        print("Optimized second layer: ", bayes_optimizer.x_opt[2])
-        print("Optimized third layer: ", bayes_optimizer.x_opt[3])
-        print("Optimized epsilon linear decay: ", bayes_optimizer.x_opt[4])
-        return self.params
+
+        print("\nOptimization Results:")
+        print("Best learning rate:", bayes_optimizer.x_opt[0])
+        print("Best first layer size:", bayes_optimizer.x_opt[1])
+        print("Best second layer size:", bayes_optimizer.x_opt[2])
+        print("Best third layer size:", bayes_optimizer.x_opt[3])
+        print("Best epsilon decay:", bayes_optimizer.x_opt[4])
+        print("Best score achieved:", self.best_score)
+
+        return self.best_params
 
 
 ##################
@@ -108,9 +127,9 @@ if __name__ == "__main__":
     # Define parameters
     params = {
         "episodes": 150,  # Number of episodes to run
-        "gamma": 0.95,    # Discount factor
-        "epsilon": 1,     # Starting exploration rate
-        "epsilon_min": 0.01  # Minimum exploration rate
+        "gamma": 0.95,  # Discount factor
+        "epsilon": 1,  # Starting exploration rate
+        "epsilon_min": 0.01,  # Minimum exploration rate
     }
 
     # Define optimizer
