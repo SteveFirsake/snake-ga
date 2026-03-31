@@ -191,6 +191,37 @@ class PygameSession:
 
         self.gameDisplay.blit(self.bg, (self._margin, self._margin))
 
+    def _display_ui_multi(self, blue_score: int, red_score: int, record: int) -> None:
+        assert self.gameDisplay is not None and self.bg is not None
+        myfont = pygame.font.SysFont("Segoe UI", 20)
+        myfont_bold = pygame.font.SysFont("Segoe UI", 20, True)
+
+        blue_label = myfont.render("BLUE: ", True, (40, 44, 52))
+        blue_val = myfont_bold.render(str(blue_score), True, (52, 92, 220))
+        red_label = myfont.render("RED: ", True, (40, 44, 52))
+        red_val = myfont_bold.render(str(red_score), True, (210, 64, 64))
+        hi_label = myfont.render("HIGHEST COMBINED: ", True, (40, 44, 52))
+        hi_val = myfont_bold.render(str(record), True, (26, 30, 36))
+
+        pad = self._hud_padding_x
+        y = self._hud_y
+        gap = 18
+
+        self.gameDisplay.blit(blue_label, (pad, y))
+        x1 = pad + blue_label.get_width()
+        self.gameDisplay.blit(blue_val, (x1, y))
+        x2 = x1 + blue_val.get_width() + gap
+        self.gameDisplay.blit(red_label, (x2, y))
+        x3 = x2 + red_label.get_width()
+        self.gameDisplay.blit(red_val, (x3, y))
+
+        hi_block = hi_label.get_width() + hi_val.get_width() + 8
+        hi_x = self.game_width - pad - hi_block
+        self.gameDisplay.blit(hi_label, (hi_x, y))
+        self.gameDisplay.blit(hi_val, (hi_x + hi_label.get_width() + 8, y))
+
+        self.gameDisplay.blit(self.bg, (self._margin, self._margin))
+
     def _render_multi(self, record: int) -> None:
         assert self.gameDisplay is not None
         assert (
@@ -198,9 +229,8 @@ class PygameSession:
         )
         eng = self.engine
         assert isinstance(eng, MultiSnakeGameEngine)
-        combined = eng.snakes[0].score + eng.snakes[1].score
         self.gameDisplay.fill((252, 253, 255))
-        self._display_ui(combined, record)
+        self._display_ui_multi(eng.snakes[0].score, eng.snakes[1].score, record)
         self._draw_tiles()
         self._draw_grid()
 
