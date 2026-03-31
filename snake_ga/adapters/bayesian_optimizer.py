@@ -1,30 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Mar 15 21:10:29 2020
+from __future__ import annotations
 
-@author: mauro
-"""
+from typing import Any
+
 from GPyOpt.methods import BayesianOptimization
 
-from snakeClass import run
-
-################################################
-#   Set parameters for Bayesian Optimization   #
-################################################
+from snake_ga.application.run_loop import run_training_or_test
+from snake_ga.wiring import build_session_agent_plotter
 
 
 class BayesianOptimizer:
-    def __init__(self, params):
-        self.params = params.copy()  # Create a copy to avoid modifying original
+    def __init__(self, params: dict[str, Any]):
+        self.params = params.copy()
         self.best_score = float("-inf")
-        self.best_params = None
+        self.best_params: dict[str, Any] | None = None
 
-    def optimize_RL(self):
-        def optimize(inputs):
+    def optimize_RL(self) -> dict[str, Any] | None:
+        def optimize(inputs: list[list[float]]) -> float:
             print("Optimizing with inputs:", inputs)
             inputs = inputs[0]
 
-            # Variables to optimize
             current_params = self.params.copy()
             current_params["learning_rate"] = inputs[0]
             lr_string = "{:.8f}".format(current_params["learning_rate"])[2:]
@@ -48,24 +42,21 @@ class BayesianOptimizer:
             current_params["train"] = True
 
             print("Testing parameters:", current_params)
-            score, mean, stdev = run(current_params)
-            print(
-                f"Results - Score: {score:.2f}, Mean: {mean:.2f}, Std dev: {stdev:.2f}"
-            )
+            session, agent, plotter = build_session_agent_plotter(current_params)
+            score, mean, stdev = run_training_or_test(current_params, session, agent, plotter)
+            print(f"Results - Score: {score:.2f}, Mean: {mean:.2f}, Std dev: {stdev:.2f}")
 
-            # Update best parameters if we found a better solution
             if score > self.best_score:
                 self.best_score = score
                 self.best_params = current_params.copy()
                 print("New best parameters found!")
 
-            # Log results
-            with open(current_params["log_path"], "a") as f:
+            with open(current_params["log_path"], "a", encoding="utf-8") as f:
                 f.write(f"\nScenario: {current_params['name_scenario']}\n")
                 f.write(f"Parameters: {current_params}\n")
                 f.write(f"Score: {score}, Mean: {mean}, Std dev: {stdev}\n")
 
-            return score
+            return float(score)
 
         optim_params = [
             {"name": "learning_rate", "type": "continuous", "domain": (0.00005, 0.001)},
@@ -118,20 +109,3 @@ class BayesianOptimizer:
         print("Best score achieved:", self.best_score)
 
         return self.best_params
-
-
-##################
-#      Main      #
-##################
-if __name__ == "__main__":
-    # Define parameters
-    params = {
-        "episodes": 150,  # Number of episodes to run
-        "gamma": 0.95,  # Discount factor
-        "epsilon": 1,  # Starting exploration rate
-        "epsilon_min": 0.01,  # Minimum exploration rate
-    }
-
-    # Define optimizer
-    bayesOpt = BayesianOptimizer(params)
-    bayesOpt.optimize_RL()

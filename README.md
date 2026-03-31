@@ -12,46 +12,60 @@ We are going to see how a Deep Q-Learning algorithm learns how to play Snake, sc
 Additionally, it is possible to run the Bayesian Optimization method to find the optimal parameters of the Deep neural network, as well as some parameters of the Deep RL approach.
 
 ## Install
-This project requires Python 3.6 with the pygame library installed, as well as Pytorch. If you encounter any error with `torch=1.7.1`, you might need to install Visual C++ 2015-2019 (or simply downgrade your pytorch version, it should be fine). \
-The full list of requirements is in `requirements.txt`. 
+Use [uv](https://docs.astral.sh/uv/) (Python 3.10+). Dependencies are declared in `pyproject.toml`; `torch` is resolved from the CPU wheel index to avoid pulling CUDA packages by default.
+
 ```bash
 git clone git@github.com:maurock/snake-ga.git
+cd snake-ga
+uv sync
 ```
+
+### Tests
+```bash
+uv sync --group dev
+uv run pytest
+```
+
+**Testing strategy:** prioritize **fast unit tests on the domain** (pure rules, state vector, rewards) — they are deterministic and do not need pygame/torch. Add **narrow adapter tests** only where wiring is risky (e.g. optional smoke test with fakes). Reserve **full training/e2e** runs for manual or CI jobs with GPUs/time budgets, not the default test suite.
 
 ## Run
-To run and show the game, executes in the snake-ga folder:
+From the repository root:
 
-```python
-python snakeClass.py
+```bash
+uv run snake-ga
 ```
-Arguments description:
 
-- --display - Type bool, default True, display or not game view
-- --speed - Type integer, default 50, game speed
+Legacy entry point (same CLI):
 
-The default configuration loads the file *weights/weights.h5* and runs a test.
+```bash
+uv run python snakeClass.py
+```
 
-To train the agent, set in the file snakeClass.py:
-- `params['train'] = True`
-The parameters of the Deep neural network can be changed in *snakeClass.py* by modifying the dictionary `params` in the function `define_parameters()`
+Arguments:
 
-If you run snakeClass.py from the command line, you can set the arguments `--display=False` and `--speed=0`. This way, the game display is not shown and the training phase is faster.
+- `--display` — bool, default `True` (game window)
+- `--speed` — int, default `50` (delay ms between frames when displaying)
+- `--bayesianopt` — bool, default `False`
+
+The default configuration loads `weights/weights.h5` and runs a test.
+
+To train the agent, set `params['train'] = True` in `snake_ga/cli.py` (`define_parameters()`), or extend the CLI.
+
+Headless / faster runs: `--display False --speed 0` (pygame is still initialized, as in the original project).
+
+## Project layout (hexagonal)
+- `snake_ga/domain/` — pure game rules and state encoding (no pygame/torch)
+- `snake_ga/application/` — ports (interfaces) and the DQN run loop
+- `snake_ga/adapters/` — pygame UI, PyTorch DQN, plotting, Bayesian optimization
+- `snake_ga/wiring.py` — composition root (binds adapters to the application)
 
 ## Optimize Deep RL with Bayesian Optimization
-To optimize the Deep neural network and additional parameters, run:
 
-```python
-python snakeClass.py --bayesianopt=True
+```bash
+uv run snake-ga --bayesianopt True
 ```
 
-This method uses Bayesian optimization to optimize some parameters of Deep RL. The parameters and the features' search space can be modified in *bayesOpt.py* by editing the `optim_params` dictionary in `optimize_RL`.
+Search space and optimizer settings live in `snake_ga/adapters/bayesian_optimizer.py` (`optimize_RL`).
 
 ## For Mac users
-It seems there is a OSX specific problem, since many users cannot see the game running.
-To fix this problem, in update_screen(), add this line.
-
-```                              
-def update_screen():
-    pygame.display.update() <br>
-    pygame.event.get() # <--- Add this line ###
-```
+If the window does not refresh on macOS, pump the event queue after `pygame.display.update()` (for example call `pygame.event.get()` once) in `snake_ga/adapters/pygame_session.py` inside `render`.
