@@ -20,11 +20,15 @@ cd snake-ga
 uv sync
 ```
 
-### Tests
+### Tests and lint
 ```bash
 uv sync --group dev
 uv run pytest
+uv run ruff check snake_ga tests
+uv run ruff format snake_ga tests
 ```
+
+Optional: install [**just**](https://github.com/casey/just) for short task aliases (`just sync`, `just test`, `just check`, `just play`). It does not replace `uv`; it only names common commands. Run `just` in the repo root to list recipes.
 
 **Testing strategy:** prioritize **fast unit tests on the domain** (pure rules, state vector, rewards) — they are deterministic and do not need pygame/torch. Add **narrow adapter tests** only where wiring is risky (e.g. optional smoke test with fakes). Reserve **full training/e2e** runs for manual or CI jobs with GPUs/time budgets, not the default test suite.
 
