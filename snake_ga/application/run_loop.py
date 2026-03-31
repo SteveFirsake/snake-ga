@@ -9,9 +9,14 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from snake_ga.application.ports import GameDisplayPort, PolicyLearnerPort, ScorePlotterPort
-from snake_ga.domain.game_engine import SnakeGameEngine
-from snake_ga.domain.state_encoding import compute_reward, encode_state
+from snake_ga.application.ports import (
+    GameDisplayPort,
+    GameEnginePort,
+    PolicyLearnerPort,
+    ScorePlotterPort,
+)
+from snake_ga.domain.state_encoding import STATE_VECTOR_SIZE, compute_reward, encode_state
+from snake_ga.policy_registry import LEARNED_POLICIES
 
 DEVICE = "cpu"
 
@@ -21,7 +26,7 @@ def _get_mean_stdev(array: list[float]) -> tuple[float, float]:
 
 
 def _initialize_game(
-    engine: SnakeGameEngine,
+    engine: GameEnginePort,
     agent: PolicyLearnerPort,
     batch_size: int,
 ) -> None:
@@ -44,7 +49,8 @@ def run_training_or_test(
     session.init_pygame()
 
     agent = agent.to(DEVICE)
-    agent.optimizer = optim.Adam(agent.parameters(), weight_decay=0, lr=params["learning_rate"])
+    if params.get("policy", "dqn") in LEARNED_POLICIES:
+        agent.optimizer = optim.Adam(agent.parameters(), weight_decay=0, lr=params["learning_rate"])
 
     counter_games = 0
     score_plot: list[float] = []
@@ -75,7 +81,7 @@ def run_training_or_test(
             else:
                 with torch.no_grad():
                     state_old_tensor = torch.tensor(
-                        state_old.reshape((1, 11)), dtype=torch.float32
+                        state_old.reshape((1, STATE_VECTOR_SIZE)), dtype=torch.float32
                     ).to(DEVICE)
                     prediction = agent(state_old_tensor)
                     final_move = np.eye(3)[np.argmax(prediction.detach().cpu().numpy()[0])]
@@ -107,7 +113,7 @@ def run_training_or_test(
         counter_plot.append(counter_games)
 
     mean, stdev = _get_mean_stdev(score_plot)
-    if params["train"]:
+    if params["train"] and params.get("policy", "dqn") in LEARNED_POLICIES:
         torch.save(agent.state_dict(), params["weights_path"])
     if plotter is not None:
         plotter.plot(counter_plot, score_plot, bool(params["train"]))

@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from snake_ga.adapters.torch_device import DEVICE
+from snake_ga.domain.state_encoding import STATE_VECTOR_SIZE
 
 
 class TorchDQNAgent(torch.nn.Module):
@@ -26,14 +27,17 @@ class TorchDQNAgent(torch.nn.Module):
         self.first_layer = params["first_layer_size"]
         self.second_layer = params["second_layer_size"]
         self.third_layer = params["third_layer_size"]
-        self.memory = collections.deque(maxlen=params["memory_size"])
+        self.memory: collections.deque[tuple[Any, ...]] = collections.deque(
+            maxlen=params["memory_size"]
+        )
         self.weights = params["weights_path"]
         self.load_weights = params["load_weights"]
+        self.state_dim = int(params.get("state_dim", STATE_VECTOR_SIZE))
         self.optimizer = None
         self.network()
 
     def network(self) -> None:
-        self.f1 = nn.Linear(11, self.first_layer)
+        self.f1 = nn.Linear(self.state_dim, self.first_layer)
         self.f2 = nn.Linear(self.first_layer, self.second_layer)
         self.f3 = nn.Linear(self.second_layer, self.third_layer)
         self.f4 = nn.Linear(self.third_layer, 3)
@@ -77,7 +81,9 @@ class TorchDQNAgent(torch.nn.Module):
                 np.expand_dims(state, 0), dtype=torch.float32, requires_grad=True
             ).to(DEVICE)
             if not done:
-                target = reward + self.gamma * torch.max(self.forward(next_state_tensor)[0])
+                target = float(
+                    reward + self.gamma * torch.max(self.forward(next_state_tensor)[0]).item()
+                )
             output = self.forward(state_tensor)
             target_f = output.clone()
             target_f[0][np.argmax(action)] = target
@@ -99,14 +105,16 @@ class TorchDQNAgent(torch.nn.Module):
         self.train()
         torch.set_grad_enabled(True)
         target = reward
-        next_state_tensor = torch.tensor(next_state.reshape((1, 11)), dtype=torch.float32).to(
-            DEVICE
-        )
+        next_state_tensor = torch.tensor(
+            next_state.reshape((1, self.state_dim)), dtype=torch.float32
+        ).to(DEVICE)
         state_tensor = torch.tensor(
-            state.reshape((1, 11)), dtype=torch.float32, requires_grad=True
+            state.reshape((1, self.state_dim)), dtype=torch.float32, requires_grad=True
         ).to(DEVICE)
         if not done:
-            target = reward + self.gamma * torch.max(self.forward(next_state_tensor[0]))
+            target = float(
+                reward + self.gamma * torch.max(self.forward(next_state_tensor[0])).item()
+            )
         output = self.forward(state_tensor)
         target_f = output.clone()
         target_f[0][np.argmax(action)] = target

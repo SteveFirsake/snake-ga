@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from GPyOpt.methods import BayesianOptimization
+from GPyOpt.methods import BayesianOptimization  # type: ignore[import-untyped]
 
 from snake_ga.application.run_loop import run_training_or_test
 from snake_ga.wiring import build_session_agent_plotter
@@ -17,15 +17,15 @@ class BayesianOptimizer:
     def optimize_RL(self) -> dict[str, Any] | None:
         def optimize(inputs: list[list[float]]) -> float:
             print("Optimizing with inputs:", inputs)
-            inputs = inputs[0]
+            row = inputs[0]
 
             current_params = self.params.copy()
-            current_params["learning_rate"] = inputs[0]
+            current_params["learning_rate"] = row[0]
             lr_string = "{:.8f}".format(current_params["learning_rate"])[2:]
-            current_params["first_layer_size"] = int(inputs[1])
-            current_params["second_layer_size"] = int(inputs[2])
-            current_params["third_layer_size"] = int(inputs[3])
-            current_params["epsilon_decay_linear"] = int(inputs[4])
+            current_params["first_layer_size"] = int(row[1])
+            current_params["second_layer_size"] = int(row[2])
+            current_params["third_layer_size"] = int(row[3])
+            current_params["epsilon_decay_linear"] = int(row[4])
 
             current_params["name_scenario"] = "snake_lr{}_struct{}_{}_{}_eps{}".format(
                 lr_string,

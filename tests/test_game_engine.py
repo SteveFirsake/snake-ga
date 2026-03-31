@@ -5,6 +5,7 @@ from unittest.mock import patch
 import numpy as np
 
 from snake_ga.domain.game_engine import SnakeGameEngine
+from snake_ga.domain.tile_grid import TileGrid
 
 
 def test_initial_head_on_grid(engine: SnakeGameEngine) -> None:
@@ -69,10 +70,21 @@ def test_snapshot_is_detached_copy(engine: SnakeGameEngine) -> None:
     assert snap.player_x == 180.0
 
 
+def test_snapshot_lookahead_sees_bonus_tile_straight_ahead() -> None:
+    rows = ["." * 20 for _ in range(20)]
+    r = list(rows[10])
+    r[9] = "+"
+    rows[10] = "".join(r)
+    grid = TileGrid(rows)
+    eng = SnakeGameEngine(440, 440, tile_grid=grid)
+    snap = eng.snapshot()
+    assert snap.tile_straight == 1
+
+
 def test_encode_state_after_snapshot(engine: SnakeGameEngine, straight: np.ndarray) -> None:
-    from snake_ga.domain.state_encoding import encode_state
+    from snake_ga.domain.state_encoding import STATE_VECTOR_SIZE, encode_state
 
     engine.apply_move(straight)
     vec = encode_state(engine.snapshot())
-    assert vec.shape == (11,)
+    assert vec.shape == (STATE_VECTOR_SIZE,)
     assert set(float(v) for v in vec).issubset({0.0, 1.0})

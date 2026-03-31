@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 
 from snake_ga.domain.models import GameSnapshot
-from snake_ga.domain.state_encoding import compute_reward, encode_state
+from snake_ga.domain.state_encoding import (
+    STATE_VECTOR_SIZE,
+    compute_reward,
+    encode_state,
+)
 
 
 def _minimal_snapshot(**overrides) -> GameSnapshot:
@@ -20,6 +24,10 @@ def _minimal_snapshot(**overrides) -> GameSnapshot:
         eaten=False,
         crash=False,
         score=0,
+        tile_under_head=0,
+        tile_straight=0,
+        tile_left=0,
+        tile_right=0,
     )
     base.update(overrides)
     return GameSnapshot(**base)
@@ -42,8 +50,12 @@ def test_encode_state_shape_and_binary() -> None:
     s = _minimal_snapshot()
     v = encode_state(s)
     assert v.dtype == np.float32
-    assert v.shape == (11,)
-    assert np.all((v == 0) | (v == 1))
+    assert v.shape == (STATE_VECTOR_SIZE,)
+    assert np.all((v[:11] == 0) | (v[:11] == 1))
+    for k in range(4):
+        sl = slice(11 + k * 4, 11 + (k + 1) * 4)
+        assert v[sl].sum() == 1.0
+        assert np.all((v[sl] == 0) | (v[sl] == 1))
 
 
 def test_encode_state_food_direction_bits() -> None:
@@ -51,3 +63,10 @@ def test_encode_state_food_direction_bits() -> None:
     v = encode_state(s)
     assert v[7] == 1.0
     assert v[8] == 0.0
+
+
+def test_encode_state_tile_straight_bonus_one_hot() -> None:
+    # index 1 = bonus tile on straight lookahead
+    s = _minimal_snapshot(tile_straight=1)
+    v = encode_state(s)
+    assert np.allclose(v[15:19], [0.0, 1.0, 0.0, 0.0])

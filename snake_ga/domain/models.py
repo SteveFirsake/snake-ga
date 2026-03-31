@@ -19,3 +19,8 @@ class GameSnapshot:
     eaten: bool
     crash: bool
     score: int
+    # Map tile kinds as 0..3 indices (see tile_grid.tile_kind_index); default all normal
+    tile_under_head: int = 0
+    tile_straight: int = 0
+    tile_left: int = 0
+    tile_right: int = 0

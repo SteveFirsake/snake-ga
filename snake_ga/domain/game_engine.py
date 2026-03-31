@@ -5,14 +5,40 @@ from random import randint
 import numpy as np
 
 from snake_ga.domain.models import GameSnapshot
+from snake_ga.domain.tile_grid import TileGrid, tile_kind_index
+
+
+def _straight_left_right_velocities(
+    x_change: int, y_change: int
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
+    """Next step delta for straight, relative-left, relative-right (matches apply_move)."""
+    straight = (x_change, y_change)
+    if y_change == 0:
+        left = (0, x_change)
+        right = (0, -x_change)
+    else:
+        left = (-y_change, 0)
+        right = (y_change, 0)
+    return straight, left, right
 
 
 class SnakeGameEngine:
     """Pure game rules (no pygame). Mirrors original Player / Game / Food behavior."""
 
-    def __init__(self, game_width: int = 440, game_height: int = 440):
+    def __init__(
+        self,
+        game_width: int = 440,
+        game_height: int = 440,
+        tile_grid: TileGrid | None = None,
+    ):
         self.game_width = game_width
         self.game_height = game_height
+        # Inner grid: (game_width - 2*margin) / cell — default 20×20 cells @ 20px, margin 20
+        self.tile_grid = tile_grid or TileGrid.all_normal(20, 20)
+        if self.tile_grid.rows != 20 or self.tile_grid.cols != 20:
+            raise ValueError(
+                "Tile grid must be 20×20 cells for the default 440×440 board (20px cells, 20px margin)."
+            )
         self.crash = False
         self.score = 0
         x = 0.45 * self.game_width
@@ -42,7 +68,17 @@ class SnakeGameEngine:
         self.x_food = 240
         self.y_food = 200
 
+    def _lookahead_tile_indices(self) -> tuple[int, int, int, int]:
+        px, py = self.x, self.y
+        straight, left, right = _straight_left_right_velocities(self.x_change, self.y_change)
+        u = tile_kind_index(self.tile_grid.kind_at_pixel(px, py))
+        s = tile_kind_index(self.tile_grid.kind_at_pixel(px + straight[0], py + straight[1]))
+        left_idx = tile_kind_index(self.tile_grid.kind_at_pixel(px + left[0], py + left[1]))
+        r = tile_kind_index(self.tile_grid.kind_at_pixel(px + right[0], py + right[1]))
+        return u, s, left_idx, r
+
     def snapshot(self) -> GameSnapshot:
+        u, s, left_idx, r = self._lookahead_tile_indices()
         return GameSnapshot(
             game_width=self.game_width,
             game_height=self.game_height,
@@ -56,6 +92,10 @@ class SnakeGameEngine:
             eaten=self.eaten,
             crash=self.crash,
             score=self.score,
+            tile_under_head=u,
+            tile_straight=s,
+            tile_left=left_idx,
+            tile_right=r,
         )
 
     def _place_food(self) -> None:
@@ -64,8 +104,11 @@ class SnakeGameEngine:
             self.x_food = x_rand - x_rand % 20
             y_rand = randint(20, self.game_height - 40)
             self.y_food = y_rand - y_rand % 20
-            if [self.x_food, self.y_food] not in self.position:
-                return
+            if [self.x_food, self.y_food] in self.position:
+                continue
+            if self.tile_grid.is_blocked_pixel(self.x_food, self.y_food):
+                continue
+            return
 
     def _eat(self) -> None:
         if self.x == self.x_food and self.y == self.y_food:
@@ -95,7 +138,7 @@ class SnakeGameEngine:
             self.snake_segments += 1
 
         if np.array_equal(move, [1, 0, 0]):
-            move_array = self.x_change, self.y_change
+            move_array = [self.x_change, self.y_change]
         elif np.array_equal(move, [0, 1, 0]) and self.y_change == 0:
             move_array = [0, self.x_change]
         elif np.array_equal(move, [0, 1, 0]) and self.x_change == 0:
@@ -115,8 +158,14 @@ class SnakeGameEngine:
             or self.y < 20
             or self.y > self.game_height - 40
             or [self.x, self.y] in self.position
+            or self.tile_grid.is_blocked_pixel(self.x, self.y)
         ):
             self.crash = True
+
+        if not self.crash:
+            self.score += self.tile_grid.score_delta_on_enter(self.x, self.y)
+            if self.score < 0:
+                self.score = 0
 
         self._eat()
         self._update_position()

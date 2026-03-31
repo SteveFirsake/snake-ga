@@ -50,18 +50,27 @@ Arguments:
 - `--display` — bool, default `True` (game window)
 - `--speed` — int, default `50` (delay ms between frames when displaying)
 - `--bayesianopt` — bool, default `False`
+- `--policy` — `dqn` (default, loads weights in test mode) or baselines: `random`, `straight`, `left`, `right`, `heuristic` (no checkpoint; rules or fixed turns)
+- `--board PATH` — optional **20×20** text map (one char per cell: `.` normal, `+` bonus, `-` penalty, `#` wall). Example: `uv run snake-ga --board boards/example.txt`
+- `--compare POLICY` — run `--policy` first, then another policy, same board/episodes; prints a small table. Default compare length is **50** games unless you set `--episodes`. Example:  
+  `uv run snake-ga --policy dqn --compare heuristic --board boards/example.txt --display false --speed 0 --episodes 20`
+- `--episodes N` — override number of games (training or evaluation)
 
-The default configuration loads `weights/weights.h5` and runs a test.
+The default configuration runs a test with the DQN policy and pretrained weights.
 
 To train the agent, set `params['train'] = True` in `snake_ga/cli.py` (`define_parameters()`), or extend the CLI.
 
 Headless / faster runs: `--display False --speed 0` (pygame is still initialized, as in the original project).
 
 ## Project layout (hexagonal)
-- `snake_ga/domain/` — pure game rules and state encoding (no pygame/torch)
+- `boards/` — optional ASCII tile maps (`20×20`: `. + - #`)
+- `snake_ga/domain/` — pure game rules, tile grid, state encoding (no pygame/torch)
+
+**State vector:** the DQN input is **27** floats: the original **11** binary features (danger, direction, food cues) plus **16** values = four **4-way one-hot** blocks for map tile kind (normal / bonus / penalty / wall) at the head cell and at the cell straight ahead, relative-left, and relative-right. Pretrained checkpoints built for the old **11**-dim input are **not** compatible; delete or replace `weights/weights.h5` and retrain after this change.
 - `snake_ga/application/` — ports (interfaces) and the DQN run loop
-- `snake_ga/adapters/` — pygame UI, PyTorch DQN, plotting, Bayesian optimization
+- `snake_ga/adapters/` — pygame UI, PyTorch DQN, random baseline policy, plotting, Bayesian optimization
 - `snake_ga/wiring.py` — composition root (binds adapters to the application)
+- `snake_ga/policy_registry.py` — policy names and `build_policy()` (DQN + baselines)
 
 ## Optimize Deep RL with Bayesian Optimization
 

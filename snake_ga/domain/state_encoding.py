@@ -6,9 +6,20 @@ import numpy as np
 
 from snake_ga.domain.models import GameSnapshot
 
+# Original DQN features (danger, direction, food relative)
+STATE_BASE_SIZE = 11
+# One-hot tile kind (normal/bonus/penalty/blocked) × 4 positions: head, straight, left, right
+TILE_ONE_HOT_DIM = 4
+STATE_TILE_SIZE = 4 * TILE_ONE_HOT_DIM
+STATE_VECTOR_SIZE = STATE_BASE_SIZE + STATE_TILE_SIZE
+
+
+def _tile_one_hot4(idx: int) -> list[float]:
+    return [1.0 if i == idx else 0.0 for i in range(TILE_ONE_HOT_DIM)]
+
 
 def encode_state(snapshot: GameSnapshot) -> np.ndarray:
-    """11-dim state vector (same semantics as the original DQN)."""
+    """27-dim vector: original 11-d DQN semantics + tile kinds (one-hot × 4)."""
     player = snapshot
     game_width = snapshot.game_width
     game_height = snapshot.game_height
@@ -124,10 +135,14 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
         food_y > py,
     ]
 
-    for i in range(len(state)):
-        state[i] = 1 if state[i] else 0
-
-    return np.asarray(state, dtype=np.float32)
+    base = np.asarray([1.0 if b else 0.0 for b in state], dtype=np.float32)
+    tile = (
+        _tile_one_hot4(snapshot.tile_under_head)
+        + _tile_one_hot4(snapshot.tile_straight)
+        + _tile_one_hot4(snapshot.tile_left)
+        + _tile_one_hot4(snapshot.tile_right)
+    )
+    return np.concatenate([base, np.asarray(tile, dtype=np.float32)])
 
 
 def compute_reward(crash: bool, eaten: bool) -> int:
