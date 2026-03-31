@@ -1,4 +1,4 @@
-"""Run two policies with identical env settings and print scores."""
+"""Run N policies with identical env settings and print scores (sequential, single-snake games)."""
 
 from __future__ import annotations
 
@@ -9,18 +9,16 @@ from snake_ga.policy_registry import LEARNED_POLICIES
 from snake_ga.wiring import build_session_agent_plotter
 
 
-def compare_policies(
-    params: dict[str, Any],
-    policy_a: str,
-    policy_b: str,
-) -> None:
+def compare_policies(params: dict[str, Any], policies: list[str]) -> None:
+    if len(policies) < 2:
+        raise ValueError("compare_policies requires at least two policy names")
     base = dict(params)
     base["train"] = False
     base["test"] = True
     base["plot_score"] = False
 
     rows: list[tuple[str, float, float, float]] = []
-    for name in (policy_a, policy_b):
+    for name in policies:
         p = dict(base)
         p["policy"] = name
         p["load_weights"] = name in LEARNED_POLICIES

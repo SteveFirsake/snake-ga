@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 from snake_ga.domain.game_engine import SnakeGameEngine
+from snake_ga.domain.multi_snake_engine import MultiSnakeGameEngine
 from snake_ga.domain.tile_grid import TileKind
 
 
@@ -32,7 +33,7 @@ class PygameSession:
     _hud_y = 440
     _hud_padding_x = 24
 
-    def __init__(self, engine: SnakeGameEngine, display: bool):
+    def __init__(self, engine: SnakeGameEngine | MultiSnakeGameEngine, display: bool):
         self.engine = engine
         self.display = display
         self.game_width = engine.game_width
@@ -166,6 +167,43 @@ class PygameSession:
 
         self.gameDisplay.blit(self.bg, (self._margin, self._margin))
 
+    def _render_multi(self, record: int) -> None:
+        assert self.gameDisplay is not None
+        assert (
+            self.snake_img is not None and self.food_img is not None and self._tail_img is not None
+        )
+        eng = self.engine
+        assert isinstance(eng, MultiSnakeGameEngine)
+        combined = eng.snakes[0].score + eng.snakes[1].score
+        self.gameDisplay.fill((252, 253, 255))
+        self._display_ui(combined, record)
+        self._draw_tiles()
+        self._draw_grid()
+
+        if not (eng.snakes[0].crash and eng.snakes[1].crash):
+            for snake in eng.snakes:
+                if snake.crash:
+                    continue
+                n = snake.snake_segments
+                for i in range(n):
+                    x_temp, y_temp = snake.position[len(snake.position) - 1 - i]
+                    head = i == 0
+                    tail = i == n - 1 and n > 1
+                    self._blit_segment(
+                        x_temp,
+                        y_temp,
+                        head=head,
+                        tail=tail,
+                        dx=snake.x_change,
+                        dy=snake.y_change,
+                    )
+            pygame.display.update()
+        else:
+            pygame.time.wait(300)
+
+        self.gameDisplay.blit(self.food_img, (eng.x_food, eng.y_food))
+        pygame.display.update()
+
     def render(self, record: int) -> None:
         if not self.display:
             return
@@ -173,6 +211,9 @@ class PygameSession:
         assert (
             self.snake_img is not None and self.food_img is not None and self._tail_img is not None
         )
+        if isinstance(self.engine, MultiSnakeGameEngine):
+            self._render_multi(record)
+            return
         p = self.engine
         self.gameDisplay.fill((252, 253, 255))
         self._display_ui(p.score, record)

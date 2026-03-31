@@ -18,6 +18,18 @@ def _tile_one_hot4(idx: int) -> list[float]:
     return [1.0 if i == idx else 0.0 for i in range(TILE_ONE_HOT_DIM)]
 
 
+def _hits_body_cell(
+    cell: list[float],
+    position: list[list[float]],
+    obstacles: tuple[tuple[float, float], ...],
+) -> bool:
+    if cell in position:
+        return True
+    if not obstacles:
+        return False
+    return (cell[0], cell[1]) in obstacles
+
+
 def encode_state(snapshot: GameSnapshot) -> np.ndarray:
     """27-dim vector: original 11-d DQN semantics + tile kinds (one-hot × 4)."""
     player = snapshot
@@ -27,13 +39,14 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
     food_y = snapshot.food_y
     px = snapshot.player_x
     py = snapshot.player_y
+    obs = snapshot.obstacle_positions
 
     state = [
         (
             player.x_change == 20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [20, 0])), player.position, obs)
                 or player.position[-1][0] + 20 >= (game_width - 20)
             )
         )
@@ -41,7 +54,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == -20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [-20, 0])), player.position, obs)
                 or player.position[-1][0] - 20 < 20
             )
         )
@@ -49,7 +62,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == -20
             and (
-                (list(map(add, player.position[-1], [0, -20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, -20])), player.position, obs)
                 or player.position[-1][-1] - 20 < 20
             )
         )
@@ -57,7 +70,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == 20
             and (
-                (list(map(add, player.position[-1], [0, 20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, 20])), player.position, obs)
                 or player.position[-1][-1] + 20 >= (game_height - 20)
             )
         ),
@@ -65,7 +78,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == -20
             and (
-                (list(map(add, player.position[-1], [20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [20, 0])), player.position, obs)
                 or player.position[-1][0] + 20 > (game_width - 20)
             )
         )
@@ -73,7 +86,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == 20
             and (
-                (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [-20, 0])), player.position, obs)
                 or player.position[-1][0] - 20 < 20
             )
         )
@@ -81,7 +94,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == -20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [0, -20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, -20])), player.position, obs)
                 or player.position[-1][-1] - 20 < 20
             )
         )
@@ -89,7 +102,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [0, 20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, 20])), player.position, obs)
                 or player.position[-1][-1] + 20 >= (game_height - 20)
             )
         ),
@@ -97,7 +110,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == 20
             and (
-                (list(map(add, player.position[-1], [20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [20, 0])), player.position, obs)
                 or player.position[-1][0] + 20 > (game_width - 20)
             )
         )
@@ -105,7 +118,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 0
             and player.y_change == -20
             and (
-                (list(map(add, player.position[-1], [-20, 0])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [-20, 0])), player.position, obs)
                 or player.position[-1][0] - 20 < 20
             )
         )
@@ -113,7 +126,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == 20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [0, -20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, -20])), player.position, obs)
                 or player.position[-1][-1] - 20 < 20
             )
         )
@@ -121,7 +134,7 @@ def encode_state(snapshot: GameSnapshot) -> np.ndarray:
             player.x_change == -20
             and player.y_change == 0
             and (
-                (list(map(add, player.position[-1], [0, 20])) in player.position)
+                _hits_body_cell(list(map(add, player.position[-1], [0, 20])), player.position, obs)
                 or player.position[-1][-1] + 20 >= (game_height - 20)
             )
         ),

@@ -36,3 +36,7 @@ bayes:
 # Compare two policies (headless, fast). For a visible window use `just compare-watch`.
 compare *args:
     uv run snake-ga --policy dqn --compare heuristic --board boards/example.txt --display false --speed 0 --episodes 15 {{args}}
+
+# JSON-driven run (see config.example.json, config.multi_agent.example.json)
+config-run *args:
+    uv run snake-ga --config config.example.json {{args}}

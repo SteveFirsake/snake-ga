@@ -24,3 +24,5 @@ class GameSnapshot:
     tile_straight: int = 0
     tile_left: int = 0
     tile_right: int = 0
+    # Other snakes' segments (as pixel coords), for multi-agent danger bits
+    obstacle_positions: tuple[tuple[float, float], ...] = ()

@@ -96,6 +96,7 @@ class SnakeGameEngine:
             tile_straight=s,
             tile_left=left_idx,
             tile_right=r,
+            obstacle_positions=(),
         )
 
     def _place_food(self) -> None:

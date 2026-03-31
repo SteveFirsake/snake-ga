@@ -1,0 +1,10 @@
+{
+  "run_mode": "multi_agent",
+  "collision_mode": "head_to_head_both_die",
+  "board": "boards/example.txt",
+  "episodes": 5,
+  "display": true,
+  "speed": 40,
+  "plot_score": false,
+  "policies": ["heuristic", "random"]
+}

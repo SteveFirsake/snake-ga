@@ -4,7 +4,6 @@ from typing import Any, Protocol
 
 import numpy as np
 
-from snake_ga.domain.game_engine import SnakeGameEngine
 from snake_ga.domain.models import GameSnapshot
 
 
@@ -73,7 +72,7 @@ class ScorePlotterPort(Protocol):
 class GameDisplayPort(Protocol):
     """Outbound port: pygame (or headless) session bound to a game engine."""
 
-    engine: SnakeGameEngine
+    engine: Any
 
     def init_pygame(self) -> None: ...
 

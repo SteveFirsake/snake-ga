@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 import statistics
 from random import randint
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import torch
@@ -15,6 +15,7 @@ from snake_ga.application.ports import (
     PolicyLearnerPort,
     ScorePlotterPort,
 )
+from snake_ga.domain.game_engine import SnakeGameEngine
 from snake_ga.domain.state_encoding import STATE_VECTOR_SIZE, compute_reward, encode_state
 from snake_ga.policy_registry import LEARNED_POLICIES
 
@@ -61,7 +62,7 @@ def run_training_or_test(
     while counter_games < params["episodes"]:
         session.pump_quit_events()
         session.engine.reset()
-        engine = session.engine
+        engine = cast(SnakeGameEngine, session.engine)
 
         _initialize_game(engine, agent, params["batch_size"])
         if params["display"]:

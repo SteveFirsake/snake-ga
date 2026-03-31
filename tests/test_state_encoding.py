@@ -28,6 +28,7 @@ def _minimal_snapshot(**overrides) -> GameSnapshot:
         tile_straight=0,
         tile_left=0,
         tile_right=0,
+        obstacle_positions=(),
     )
     base.update(overrides)
     return GameSnapshot(**base)

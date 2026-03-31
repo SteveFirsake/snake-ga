@@ -1,0 +1,8 @@
+{
+  "run_mode": "compare",
+  "board": "boards/example.txt",
+  "episodes": 10,
+  "display": false,
+  "speed": 0,
+  "policies": ["heuristic", "random", "straight"]
+}
