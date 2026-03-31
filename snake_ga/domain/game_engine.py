@@ -150,20 +150,31 @@ class SnakeGameEngine:
             move_array = [self.y_change, 0]
 
         self.x_change, self.y_change = move_array
-        self.x = x + self.x_change
-        self.y = y + self.y_change
+        next_x = x + self.x_change
+        next_y = y + self.y_change
+        if next_x < 20:
+            next_x = self.game_width - 40
+        elif next_x > self.game_width - 40:
+            next_x = 20
+        if next_y < 20:
+            next_y = self.game_height - 40
+        elif next_y > self.game_height - 40:
+            next_y = 20
+        blocked_by_inner_wall = self.tile_grid.is_blocked_pixel(next_x, next_y)
+        if blocked_by_inner_wall:
+            # Inner walls are barriers: movement is blocked, but snake does not die.
+            self.x, self.y = x, y
+        else:
+            self.x, self.y = next_x, next_y
 
+        moved = (self.x != x) or (self.y != y)
+        self_body_collision = moved and ([self.x, self.y] in self.position)
         if (
-            self.x < 20
-            or self.x > self.game_width - 40
-            or self.y < 20
-            or self.y > self.game_height - 40
-            or [self.x, self.y] in self.position
-            or self.tile_grid.is_blocked_pixel(self.x, self.y)
+            self_body_collision
         ):
             self.crash = True
 
-        if not self.crash:
+        if not self.crash and moved:
             self.score += self.tile_grid.score_delta_on_enter(self.x, self.y)
             if self.score < 0:
                 self.score = 0

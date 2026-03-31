@@ -26,6 +26,15 @@ def _head_angle_degrees(dx: int, dy: int) -> float:
     return 0.0
 
 
+def _tint_surface(src: pygame.Surface, rgb: tuple[int, int, int]) -> pygame.Surface:
+    """Colorize the snake sprite while preserving alpha."""
+    out = src.copy()
+    tint = pygame.Surface(src.get_size(), pygame.SRCALPHA)
+    tint.fill((*rgb, 255))
+    out.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return out
+
+
 class PygameSession:
     """Pygame adapter: renders domain `SnakeGameEngine` state."""
 
@@ -43,6 +52,12 @@ class PygameSession:
         self.snake_img: pygame.Surface | None = None
         self.food_img: pygame.Surface | None = None
         self._tail_img: pygame.Surface | None = None
+        self._snake_green: pygame.Surface | None = None
+        self._snake_blue: pygame.Surface | None = None
+        self._snake_red: pygame.Surface | None = None
+        self._tail_green: pygame.Surface | None = None
+        self._tail_blue: pygame.Surface | None = None
+        self._tail_red: pygame.Surface | None = None
 
     def init_pygame(self) -> None:
         pygame.init()
@@ -65,6 +80,14 @@ class PygameSession:
         self._tail_img = pygame.transform.smoothscale(
             self.snake_img, (max(1, int(sw * 0.82)), max(1, int(sh * 0.82)))
         )
+        # Mono snake is green; multi snakes are blue/red.
+        self._snake_green = _tint_surface(self.snake_img, (72, 186, 104))
+        self._snake_blue = _tint_surface(self.snake_img, (80, 130, 255))
+        self._snake_red = _tint_surface(self.snake_img, (226, 88, 88))
+        assert self._tail_img is not None
+        self._tail_green = _tint_surface(self._tail_img, (72, 186, 104))
+        self._tail_blue = _tint_surface(self._tail_img, (80, 130, 255))
+        self._tail_red = _tint_surface(self._tail_img, (226, 88, 88))
 
     def pump_quit_events(self) -> None:
         for event in pygame.event.get():
@@ -128,21 +151,22 @@ class PygameSession:
         tail: bool,
         dx: int,
         dy: int,
+        body_img: pygame.Surface,
+        tail_img: pygame.Surface,
     ) -> None:
         assert self.gameDisplay is not None
-        assert self.snake_img is not None and self._tail_img is not None
         cx, cy = x + 10, y + 10
         if head:
             angle = _head_angle_degrees(dx, dy)
-            img = pygame.transform.rotate(self.snake_img, angle)
+            img = pygame.transform.rotate(body_img, angle)
             rect = img.get_rect(center=(cx, cy))
             self.gameDisplay.blit(img, rect)
         elif tail:
-            rect = self._tail_img.get_rect(center=(cx, cy))
-            self.gameDisplay.blit(self._tail_img, rect)
+            rect = tail_img.get_rect(center=(cx, cy))
+            self.gameDisplay.blit(tail_img, rect)
         else:
-            rect = self.snake_img.get_rect(center=(cx, cy))
-            self.gameDisplay.blit(self.snake_img, rect)
+            rect = body_img.get_rect(center=(cx, cy))
+            self.gameDisplay.blit(body_img, rect)
 
     def _display_ui(self, score: int, record: int) -> None:
         assert self.gameDisplay is not None and self.bg is not None
@@ -180,10 +204,12 @@ class PygameSession:
         self._draw_tiles()
         self._draw_grid()
 
+        # Draw both snakes even after crash so they do not disappear.
         if not (eng.snakes[0].crash and eng.snakes[1].crash):
-            for snake in eng.snakes:
-                if snake.crash:
-                    continue
+            for idx, snake in enumerate(eng.snakes):
+                body_img = self._snake_blue if idx == 0 else self._snake_red
+                tail_img = self._tail_blue if idx == 0 else self._tail_red
+                assert body_img is not None and tail_img is not None
                 n = snake.snake_segments
                 for i in range(n):
                     x_temp, y_temp = snake.position[len(snake.position) - 1 - i]
@@ -196,6 +222,8 @@ class PygameSession:
                         tail=tail,
                         dx=snake.x_change,
                         dy=snake.y_change,
+                        body_img=body_img,
+                        tail_img=tail_img,
                     )
             pygame.display.update()
         else:
@@ -221,6 +249,7 @@ class PygameSession:
         self._draw_grid()
 
         if not p.crash:
+            assert self._snake_green is not None and self._tail_green is not None
             n = p.snake_segments
             for i in range(n):
                 x_temp, y_temp = p.position[len(p.position) - 1 - i]
@@ -233,6 +262,8 @@ class PygameSession:
                     tail=tail,
                     dx=p.x_change,
                     dy=p.y_change,
+                    body_img=self._snake_green,
+                    tail_img=self._tail_green,
                 )
             pygame.display.update()
         else:

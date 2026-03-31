@@ -166,6 +166,29 @@ class MultiSnakeGameEngine:
             s.position[-1][0] = x
             s.position[-1][1] = y
 
+    def _wrap(self, x: float, y: float) -> tuple[float, float]:
+        nx, ny = x, y
+        if nx < 20:
+            nx = self.game_width - 40
+        elif nx > self.game_width - 40:
+            nx = 20
+        if ny < 20:
+            ny = self.game_height - 40
+        elif ny > self.game_height - 40:
+            ny = 20
+        return nx, ny
+
+    def _apply_food_steal_on_contact(self, s0: SnakeState, s1: SnakeState) -> None:
+        """On snake-vs-snake contact: steal 1 from higher score to lower score."""
+        if s0.score == s1.score:
+            return
+        if s0.score > s1.score:
+            s0.score = max(0, s0.score - 1)
+            s1.score += 1
+            return
+        s1.score = max(0, s1.score - 1)
+        s0.score += 1
+
     def apply_tick(self, moves: tuple[np.ndarray, np.ndarray]) -> None:
         """Apply one tick: both snakes choose moves; resolve collisions then update."""
         s0, s1 = self.snakes
@@ -177,6 +200,8 @@ class MultiSnakeGameEngine:
 
         crash0 = bool(s0.crash)
         crash1 = bool(s1.crash)
+        inter_hit0 = False
+        inter_hit1 = False
         hx0 = hy0 = hx1 = hy1 = 0.0
 
         if not s0.crash:
@@ -188,43 +213,66 @@ class MultiSnakeGameEngine:
             s1.x_change, s1.y_change = nx1
             hx1, hy1 = s1.x + s1.x_change, s1.y + s1.y_change
 
+        blocked0 = False
+        blocked1 = False
         if not s0.crash and not s1.crash:
             if [hx0, hy0] == [hx1, hy1]:
-                if self.collision_mode == "head_to_head_both_die":
-                    crash0 = crash1 = True
-                else:
-                    crash1 = True
+                inter_hit0 = True
+                inter_hit1 = True
             else:
-                if self._hits_wall_or_wall_tile(hx0, hy0):
-                    crash0 = True
-                if self._hits_wall_or_wall_tile(hx1, hy1):
-                    crash1 = True
-                if not crash0 and (
+                hx0, hy0 = self._wrap(hx0, hy0)
+                hx1, hy1 = self._wrap(hx1, hy1)
+                if not crash0 and self.tile_grid.is_blocked_pixel(hx0, hy0):
+                    hx0, hy0 = s0.x, s0.y
+                    blocked0 = True
+                if not crash1 and self.tile_grid.is_blocked_pixel(hx1, hy1):
+                    hx1, hy1 = s1.x, s1.y
+                    blocked1 = True
+                if not crash0 and not blocked0 and (
                     [hx0, hy0] in s0.position or [hx0, hy0] in s1.position
                 ):
-                    crash0 = True
-                if not crash1 and (
+                    if [hx0, hy0] in s1.position:
+                        inter_hit0 = True
+                    else:
+                        crash0 = True
+                if not crash1 and not blocked1 and (
                     [hx1, hy1] in s1.position or [hx1, hy1] in s0.position
                 ):
-                    crash1 = True
+                    if [hx1, hy1] in s0.position:
+                        inter_hit1 = True
+                    else:
+                        crash1 = True
 
         elif not s0.crash:
-            if self._hits_wall_or_wall_tile(hx0, hy0):
-                crash0 = True
-            elif [hx0, hy0] in s0.position or [hx0, hy0] in s1.position:
-                crash0 = True
+            hx0, hy0 = self._wrap(hx0, hy0)
+            if self.tile_grid.is_blocked_pixel(hx0, hy0):
+                hx0, hy0 = s0.x, s0.y
+                blocked0 = True
+            elif not blocked0 and ([hx0, hy0] in s0.position or [hx0, hy0] in s1.position):
+                if [hx0, hy0] in s1.position:
+                    inter_hit0 = True
+                else:
+                    crash0 = True
         elif not s1.crash:
-            if self._hits_wall_or_wall_tile(hx1, hy1):
-                crash1 = True
-            elif [hx1, hy1] in s1.position or [hx1, hy1] in s0.position:
-                crash1 = True
+            hx1, hy1 = self._wrap(hx1, hy1)
+            if self.tile_grid.is_blocked_pixel(hx1, hy1):
+                hx1, hy1 = s1.x, s1.y
+                blocked1 = True
+            elif not blocked1 and ([hx1, hy1] in s1.position or [hx1, hy1] in s0.position):
+                if [hx1, hy1] in s0.position:
+                    inter_hit1 = True
+                else:
+                    crash1 = True
+
+        if inter_hit0 or inter_hit1:
+            self._apply_food_steal_on_contact(s0, s1)
 
         s0.crash = crash0
         s1.crash = crash1
 
-        if not s0.crash:
+        if not s0.crash and not inter_hit0:
             s0.x, s0.y = hx0, hy0
-        if not s1.crash:
+        if not s1.crash and not inter_hit1:
             s1.x, s1.y = hx1, hy1
 
         for s in (s0, s1):
@@ -240,17 +288,6 @@ class MultiSnakeGameEngine:
             self._update_position(s0)
         if not s1.crash:
             self._update_position(s1)
-
-    def _hits_wall_or_wall_tile(self, x: float, y: float) -> bool:
-        if (
-            x < 20
-            or x > self.game_width - 40
-            or y < 20
-            or y > self.game_height - 40
-            or self.tile_grid.is_blocked_pixel(x, y)
-        ):
-            return True
-        return False
 
     def _eat_for_snake(self, s: SnakeState) -> None:
         if s.crash:

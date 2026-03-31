@@ -40,7 +40,7 @@ def test_right_turn_from_horizontal(engine: SnakeGameEngine) -> None:
     assert engine.x_change == 0 and engine.y_change == 20
 
 
-def test_wall_crash_left() -> None:
+def test_outer_wall_wraps_left() -> None:
     e = SnakeGameEngine(100, 100)
     e.x = 40.0
     e.y = 40.0
@@ -49,8 +49,23 @@ def test_wall_crash_left() -> None:
     e.y_change = 0
     e.apply_move(np.array([1.0, 0.0, 0.0]))
     assert e.crash is False
+    # Wrap from x=20 to opposite inner edge x=60 on a 100x100 board.
+    assert e.x == 20.0 and e.y == 40.0
     e.apply_move(np.array([1.0, 0.0, 0.0]))
-    assert e.crash is True
+    assert e.crash is False
+    assert e.x == 60.0 and e.y == 40.0
+
+
+def test_inner_wall_blocks_but_does_not_kill() -> None:
+    rows = ["." * 20 for _ in range(20)]
+    r = list(rows[10])
+    r[9] = "#"
+    rows[10] = "".join(r)
+    e = SnakeGameEngine(440, 440, tile_grid=TileGrid(rows))
+    # Start at (180, 220), move straight into blocked cell (200, 220).
+    e.apply_move(np.array([1.0, 0.0, 0.0]))
+    assert e.crash is False
+    assert e.x == 180.0 and e.y == 220.0
 
 
 def test_eating_increments_score_and_sets_eaten(

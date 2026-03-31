@@ -37,6 +37,6 @@ bayes:
 compare *args:
     uv run snake-ga --policy dqn --compare heuristic --board boards/example.txt --display false --speed 0 --episodes 15 {{args}}
 
-# JSON-driven run (see config.example.json, config.multi_agent.example.json)
+# JSON-driven run (see config/config.example.json, config/config.multi_agent.example.json)
 config-run *args:
-    uv run snake-ga --config config.example.json {{args}}
+    uv run snake-ga --config config/config.multi_agent.example.json {{args}} --display true --speed 50 --episodes 50
