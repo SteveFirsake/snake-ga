@@ -46,15 +46,23 @@ class PygameSession:
     def init_pygame(self) -> None:
         pygame.init()
         pygame.font.init()
-        pygame.display.set_caption("SnakeGen")
         root = _project_root()
-        self.gameDisplay = pygame.display.set_mode((self.game_width, self.game_height + 60))
+        w, h = self.game_width, self.game_height + 60
+        if self.display:
+            pygame.display.set_caption("SnakeGen")
+            self.gameDisplay = pygame.display.set_mode((w, h))
+        else:
+            # No visible window: render() is a no-op, but the loop still needs a surface for assets.
+            self.gameDisplay = pygame.Surface((w, h))
         self.bg = pygame.image.load(str(root / "img" / "background.png"))
-        self.snake_img = pygame.image.load(str(root / "img" / "snakeBody.png")).convert_alpha()
-        self.food_img = pygame.image.load(str(root / "img" / "food2.png")).convert_alpha()
-        w, h = self.snake_img.get_size()
+        snake_raw = pygame.image.load(str(root / "img" / "snakeBody.png"))
+        food_raw = pygame.image.load(str(root / "img" / "food2.png"))
+        # convert_alpha() needs a video mode; headless uses an offscreen Surface only.
+        self.snake_img = snake_raw.convert_alpha() if self.display else snake_raw
+        self.food_img = food_raw.convert_alpha() if self.display else food_raw
+        sw, sh = self.snake_img.get_size()
         self._tail_img = pygame.transform.smoothscale(
-            self.snake_img, (max(1, int(w * 0.82)), max(1, int(h * 0.82)))
+            self.snake_img, (max(1, int(sw * 0.82)), max(1, int(sh * 0.82)))
         )
 
     def pump_quit_events(self) -> None:

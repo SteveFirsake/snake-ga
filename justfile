@@ -33,6 +33,6 @@ play *args:
 bayes:
     uv run snake-ga --bayesianopt true
 
-# Compare two policies on the same board (short run); pass overrides after `--`
+# Compare two policies (headless, fast). For a visible window use `just compare-watch`.
 compare *args:
     uv run snake-ga --policy dqn --compare heuristic --board boards/example.txt --display false --speed 0 --episodes 15 {{args}}

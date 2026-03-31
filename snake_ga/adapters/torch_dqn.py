@@ -43,10 +43,24 @@ class TorchDQNAgent(torch.nn.Module):
         self.f4 = nn.Linear(self.third_layer, 3)
         if self.load_weights:
             try:
-                state = torch.load(self.weights, map_location=DEVICE, weights_only=False)
-            except TypeError:
-                state = torch.load(self.weights, map_location=DEVICE)
-            self.load_state_dict(state)
+                try:
+                    state = torch.load(self.weights, map_location=DEVICE, weights_only=False)
+                except TypeError:
+                    state = torch.load(self.weights, map_location=DEVICE)
+            except FileNotFoundError:
+                print(
+                    f"Warning: weights file not found: {self.weights!r}. Using random initialization."
+                )
+                return
+            try:
+                self.load_state_dict(state)
+            except RuntimeError as e:
+                print(
+                    f"Warning: could not load checkpoint from {self.weights!r} ({e!s}).\n"
+                    f"Using random initialization (network expects state_dim={self.state_dim}). "
+                    "Retrain or replace with a matching weights file."
+                )
+                return
             print("weights loaded")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
