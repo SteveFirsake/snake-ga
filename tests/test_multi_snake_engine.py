@@ -1,4 +1,5 @@
 import numpy as np
+from unittest.mock import patch
 
 from snake_ga.domain.multi_snake_engine import MultiSnakeGameEngine
 from snake_ga.domain.tile_grid import TileGrid
@@ -79,3 +80,19 @@ def test_multi_outer_wall_wraps_without_crash() -> None:
     eng.apply_tick((np.array([1.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])))
     assert s0.crash is False
     assert s0.x == 60.0 and s0.y == 40.0
+
+
+def test_multi_food_spawn_avoids_bonus_and_penalty_tiles() -> None:
+    rows = ["." * 20 for _ in range(20)]
+    row = list(rows[10])
+    row[10] = "+"
+    row[11] = "-"
+    rows[10] = "".join(row)
+    eng = MultiSnakeGameEngine(440, 440, tile_grid=TileGrid(rows))
+    with patch(
+        "snake_ga.domain.multi_snake_engine.randint",
+        side_effect=[220, 220, 240, 220, 260, 220],
+    ):
+        eng._place_food()
+    assert eng.x_food == 260
+    assert eng.y_food == 220

@@ -5,7 +5,7 @@ from random import randint
 import numpy as np
 
 from snake_ga.domain.models import GameSnapshot
-from snake_ga.domain.tile_grid import TileGrid, tile_kind_index
+from snake_ga.domain.tile_grid import TileGrid, TileKind, tile_kind_index
 
 
 def _straight_left_right_velocities(
@@ -107,7 +107,8 @@ class SnakeGameEngine:
             self.y_food = y_rand - y_rand % 20
             if [self.x_food, self.y_food] in self.position:
                 continue
-            if self.tile_grid.is_blocked_pixel(self.x_food, self.y_food):
+            # Keep regular food on neutral tiles only (no blocked/bonus/penalty overlap).
+            if self.tile_grid.kind_at_pixel(self.x_food, self.y_food) != TileKind.NORMAL:
                 continue
             return
 

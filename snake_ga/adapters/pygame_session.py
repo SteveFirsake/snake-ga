@@ -204,21 +204,23 @@ class PygameSession:
         hi_val = myfont_bold.render(str(record), True, (26, 30, 36))
 
         pad = self._hud_padding_x
-        y = self._hud_y
+        y_top = self._hud_y
+        y_bottom = self._hud_y + 22
         gap = 18
 
-        self.gameDisplay.blit(blue_label, (pad, y))
+        # Line 1: both scores (never overlaps line 2)
+        self.gameDisplay.blit(blue_label, (pad, y_top))
         x1 = pad + blue_label.get_width()
-        self.gameDisplay.blit(blue_val, (x1, y))
+        self.gameDisplay.blit(blue_val, (x1, y_top))
         x2 = x1 + blue_val.get_width() + gap
-        self.gameDisplay.blit(red_label, (x2, y))
+        self.gameDisplay.blit(red_label, (x2, y_top))
         x3 = x2 + red_label.get_width()
-        self.gameDisplay.blit(red_val, (x3, y))
+        self.gameDisplay.blit(red_val, (x3, y_top))
 
-        hi_block = hi_label.get_width() + hi_val.get_width() + 8
-        hi_x = self.game_width - pad - hi_block
-        self.gameDisplay.blit(hi_label, (hi_x, y))
-        self.gameDisplay.blit(hi_val, (hi_x + hi_label.get_width() + 8, y))
+        # Line 2: combined high score aligned with the score row's left margin.
+        hi_x = pad
+        self.gameDisplay.blit(hi_label, (hi_x, y_bottom))
+        self.gameDisplay.blit(hi_val, (hi_x + hi_label.get_width() + 8, y_bottom))
 
         self.gameDisplay.blit(self.bg, (self._margin, self._margin))
 

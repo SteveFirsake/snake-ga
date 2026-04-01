@@ -103,3 +103,16 @@ def test_encode_state_after_snapshot(engine: SnakeGameEngine, straight: np.ndarr
     vec = encode_state(engine.snapshot())
     assert vec.shape == (STATE_VECTOR_SIZE,)
     assert set(float(v) for v in vec).issubset({0.0, 1.0})
+
+
+def test_food_spawn_avoids_bonus_and_penalty_tiles() -> None:
+    rows = ["." * 20 for _ in range(20)]
+    row = list(rows[10])
+    row[10] = "+"
+    row[11] = "-"
+    rows[10] = "".join(row)
+    eng = SnakeGameEngine(440, 440, tile_grid=TileGrid(rows))
+    with patch("snake_ga.domain.game_engine.randint", side_effect=[220, 220, 240, 220, 260, 220]):
+        eng._place_food()
+    assert eng.x_food == 260
+    assert eng.y_food == 220

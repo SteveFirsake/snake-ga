@@ -10,7 +10,7 @@ import numpy as np
 
 from snake_ga.domain.game_engine import _straight_left_right_velocities
 from snake_ga.domain.models import GameSnapshot
-from snake_ga.domain.tile_grid import TileGrid, tile_kind_index
+from snake_ga.domain.tile_grid import TileGrid, TileKind, tile_kind_index
 
 
 def _next_velocity_from_move(move: np.ndarray, xc: int, yc: int) -> tuple[int, int]:
@@ -110,7 +110,8 @@ class MultiSnakeGameEngine:
             occupied = [self.x_food, self.y_food]
             if any(occupied in s.position for s in self.snakes):
                 continue
-            if self.tile_grid.is_blocked_pixel(self.x_food, self.y_food):
+            # Keep regular food on neutral tiles only (no blocked/bonus/penalty overlap).
+            if self.tile_grid.kind_at_pixel(self.x_food, self.y_food) != TileKind.NORMAL:
                 continue
             return
 
